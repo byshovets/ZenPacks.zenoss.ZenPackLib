@@ -13,9 +13,13 @@ import sys
 import importlib
 import keyword
 from collections import OrderedDict
+from zope.component import getUtilitiesFor
 from ..functions import ZENOSS_KEYWORDS, JS_WORDS, relname_from_classname, find_keyword_cls
 from .ZenPackLibLog import ZPLOG, DEFAULTLOG
 from ..base.types import Severity, multiline
+
+from ..spec.ClassSpec import IClassPlugin
+from ..spec.ClassPropertySpec import IPropertyPlugin
 
 
 class OrderedLoader(yaml.Loader):
@@ -160,6 +164,14 @@ class ZenPackSpecLoader(OrderedLoader):
                 # set this to an empty dict for now
                 params[extra_params] = {}
 
+        plugged_keys = []
+
+        for _, plugin in getUtilitiesFor(IClassPlugin):
+            plugged_keys.append(plugin.name)
+
+        for _, plugin in getUtilitiesFor(IPropertyPlugin):
+            plugged_keys.append(plugin.name)
+
         for key_node, value_node in node.value:
             yaml_key = self.construct_object(key_node)
             # make sure this isn't a reserved keyword
@@ -175,6 +187,9 @@ class ZenPackSpecLoader(OrderedLoader):
                     # Note that the values of these extra parameters need to be
                     # scalars, not nested maps or something like that.
                     params[extra_params][yaml_key] = self.construct_object(value_node)
+                    continue
+                elif len(plugged_keys):
+                    params[yaml_key] = self.construct_object(value_node)
                     continue
                 else:
                     self.yaml_error(yaml.constructor.ConstructorError(

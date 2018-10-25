@@ -6,11 +6,26 @@
 # License.zenoss under the directory where your Zenoss product is installed.
 #
 ##############################################################################
+
+from zope.interface import (
+    Interface,
+    Attribute,
+)
+from zope.component import getUtilitiesFor
+
 from Products.Zuul.form import schema
 from Products.Zuul.utils import ZuulMessageFactory as _t
 from Products.Zuul.infos import ProxyProperty
 from ..helpers.OrderAndValue import OrderAndValue
 from .Spec import Spec, MethodInfoProperty, EnumInfoProperty
+
+
+class IPropertyPlugin(Interface):
+    name = Attribute("Property name")
+    default = Attribute("Default property value")
+
+    def validate(value):
+        """ Value validator """
 
 
 class ClassPropertySpec(Spec):
@@ -42,6 +57,7 @@ class ClassPropertySpec(Spec):
             index_scope='device',
             _source_location=None,
             zplog=None,
+            **kwargs
             ):
         """
         Create a Class Property Specification
@@ -151,6 +167,10 @@ class ClassPropertySpec(Spec):
                 % (name, self.index_scope))
 
         self.order = order
+
+        for _, plugin in getUtilitiesFor(IPropertyPlugin):
+            value = kwargs.get(plugin.name, plugin.default)
+            plugin.validate(value) and setattr(self, plugin.name, value)
 
     @property
     def scaled_order(self):

@@ -64,6 +64,9 @@ from lib.base.Component import (
 )
 
 from lib.spec import ZenPackSpec
+from lib.spec.ClassSpec import IClassPlugin
+from lib.spec.ClassPropertySpec import IPropertyPlugin
+
 from lib.functions import relationships_from_yuml, catalog_search, ucfirst, relname_from_classname
 
 LOG = logging.getLogger('zen.ZenPackLib')

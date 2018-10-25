@@ -11,7 +11,13 @@ import math
 import re
 import time
 import copy
-from zope.interface import classImplements
+from zope.interface import (
+    classImplements,
+    Interface,
+    Attribute,
+)
+from zope.component import getUtilitiesFor
+
 from Products.Zuul.decorators import memoize
 from Products.Zuul.utils import ZuulMessageFactory as _t
 from Products.ZenRelations.RelSchema import ToMany, ToManyCont
@@ -54,6 +60,14 @@ if IMPACT_INSTALLED:
 HAS_METRICFACADE = has_metricfacade()
 
 GSM = get_gsm()
+
+
+class IClassPlugin(Interface):
+    name = Attribute("Property name")
+    default = Attribute("Default property value")
+
+    def validate(value):
+        """ Value validator """
 
 
 class ClassSpec(Spec):
@@ -144,7 +158,8 @@ class ClassSpec(Spec):
             dynamicview_relations=None,
             extra_paths=None,
             _source_location=None,
-            zplog=None
+            zplog=None,
+            **kwargs
             ):
         """
             Create a Class Specification
@@ -359,6 +374,10 @@ class ClassSpec(Spec):
                 self.path_pattern_streams.append(pattern_stream)
         else:
             self.extra_paths = []
+
+        for _, plugin in getUtilitiesFor(IClassPlugin):
+            value = kwargs.get(plugin.name, plugin.default)
+            plugin.validate(value) and setattr(self, name, value)
 
     @property
     def scaled_order(self):
